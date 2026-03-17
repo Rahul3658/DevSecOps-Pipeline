@@ -1,17 +1,24 @@
 # 🚀 Production-Ready Jenkins CI/CD Pipeline (DevSecOps)
 
-This repository contains a **production-ready Jenkins pipeline (Jenkinsfile)** integrating DevOps + DevSecOps tools:
+This repository demonstrates a **production-ready DevSecOps CI/CD pipeline** built using Jenkins and integrated with modern security and deployment tools.
 
-* 🔐 Gitleaks (Secrets Detection)
-* 📊 SonarQube (Code Quality)
-* 🐳 Docker (Containerization)
-* 🔍 Trivy (Image Security Scan)
-* ☸️ Kubernetes (Deployment via manifests)
-* 🛡️ Checkov (K8s Security Scan)
+It follows **shift-left security** and **GitOps principles** using ArgoCD.
 
 ---
 
-## 📌 📂 Project Structure
+## 📌 🔧 Tech Stack
+
+* 🔐 **Gitleaks** – Secret Detection
+* 📊 **SonarQube** – Code Quality Analysis
+* 🐳 **Docker** – Containerization
+* 🔍 **Trivy** – Container Image Security Scan
+* ☸️ **Kubernetes** – Container Orchestration
+* 🛡️ **Checkov** – Infrastructure as Code Security
+* 🚀 **ArgoCD** – GitOps Continuous Deployment
+
+---
+
+## 📂 📁 Project Structure
 
 ```
 .
@@ -20,13 +27,14 @@ This repository contains a **production-ready Jenkins pipeline (Jenkinsfile)** i
 ├── k8s-manifests/
 │   ├── frontend_deployment.yaml
 │   └── service.yaml
+├── screenshots/
 ```
 
 ---
 
 ## ⚙️ 🔧 Prerequisites
 
-Ensure the following tools are installed on your Jenkins server (agent node):
+Ensure the following tools are installed on your Jenkins agent:
 
 | Tool      | Purpose                  |
 | --------- | ------------------------ |
@@ -116,8 +124,6 @@ pip install checkov
 
 ### 7️⃣ Setup SonarQube
 
-Run SonarQube using Docker:
-
 ```bash
 docker run -d --name sonarqube -p 9000:9000 sonarqube:lts
 ```
@@ -140,19 +146,15 @@ admin / admin
 
 ### 🔐 Add Credentials
 
-Go to:
-
 ```
 Manage Jenkins → Credentials
 ```
 
-Add:
-
-| ID                       | Type              | Usage         |
-| ------------------------ | ----------------- | ------------- |
-| github                   | Username/Password | Clone code    |
-| dockerhub-credentials-ID | Username/Password | Push image    |
-| git-cred-ID              | Username/Password | Push manifest |
+| ID                       | Usage                     |
+| ------------------------ | ------------------------- |
+| github                   | Clone source code         |
+| dockerhub-credentials-ID | Push Docker image         |
+| git-cred-ID              | Push Kubernetes manifests |
 
 ---
 
@@ -173,59 +175,103 @@ Manage Jenkins → Global Tool Configuration
 Manage Jenkins → Configure System
 ```
 
-* Add SonarQube server
+* Add SonarQube Server
 * Name: `SonarQube`
-* Add token
+* Add authentication token
 
 ---
 
 ## 🚀 Pipeline Workflow
 
-1. 📥 Checkout source code
-2. 🔐 Scan secrets using Gitleaks
-3. 📊 Run SonarQube analysis
-4. 🐳 Build Docker image
-5. 🔍 Scan image using Trivy
-6. 📦 Push image to Docker Hub
-7. ☸️ Update Kubernetes manifests
-8. 🛡️ Scan manifests using Checkov
-9. 🔄 Push updated manifests
-10. 🧹 Cleanup old Docker images
+1. 📥 Checkout Code
+2. 🔐 Run Gitleaks (Secrets Scan)
+3. 📊 SonarQube Code Analysis
+4. 🐳 Build Docker Image
+5. 🔍 Trivy Image Scan
+6. 📦 Push Image to Docker Hub
+7. ☸️ Update Kubernetes Manifests
+8. 🛡️ Checkov Security Scan
+9. 🚀 ArgoCD Sync Deployment
+10. 🧹 Cleanup Docker Images
+
+---
+
+## 📸 Pipeline Execution (Proof)
+
+### 🚀 Jenkins Pipeline
+
+![Jenkins](screenshots/jenkins-pipeline.png)
+
+---
+
+### 📊 SonarQube Dashboard
+
+![SonarQube](screenshots/sonarQube.png)
+
+---
+
+### 🔍 Trivy Security Scan
+
+![Trivy](screenshots/trivy.png)
+
+---
+
+### 🛡️ Checkov Scan (CLI Output)
+
+![Checkov](screenshots/checov.png)
+
+---
+
+## 🚀 GitOps Deployment using ArgoCD
+
+This project follows **GitOps workflow**:
+
+* Jenkins updates Kubernetes manifests
+* Changes pushed to GitHub
+* ArgoCD automatically detects changes
+* Syncs application to Kubernetes cluster
+
+---
+
+### 📦 ArgoCD Application Dashboard
+
+![ArgoCD](screenshots/argoCD-1.png)
+
+---
+
+### 🔄 ArgoCD Sync Status
+
+![ArgoCD Sync](screenshots/argoCD-2.png)
 
 ---
 
 ## 🧪 Running the Pipeline
 
-1. Create a new **Pipeline Job** in Jenkins
-2. Select:
-
-```
-Pipeline script from SCM
-```
-
-3. Add your GitHub repo URL
+1. Create a Jenkins Pipeline Job
+2. Select **Pipeline script from SCM**
+3. Add repository URL
 4. Select branch: `main`
-5. Save & Click **Build Now**
+5. Click **Build Now**
 
 ---
 
 ## 🔐 Security Best Practices
 
 * Never hardcode secrets (use Jenkins credentials)
-* Enable Trivy + Gitleaks in pipeline
-* Use private Docker repositories in production
-* Enable RBAC in Kubernetes
+* Integrate security scans (Gitleaks, Trivy, Checkov)
+* Use RBAC in Kubernetes
 * Rotate credentials regularly
+* Use private container registry in production
 
 ---
 
-## 🧠 Improvements (Future Scope)
+## 🧠 Future Improvements
 
-* Add Helm instead of raw manifests
-* Replace Ingress with Gateway API (future-ready)
-* Integrate ArgoCD for GitOps deployment
-* Add Slack/Email notifications
-* Add OWASP Dependency Check
+* Helm-based deployments
+* Kubernetes Gateway API
+* Slack / Email notifications
+* Automated rollback strategy
+* OWASP Dependency Check integration
 
 ---
 
