@@ -277,8 +277,8 @@ This project follows **GitOps workflow**:
 
 ## 👨‍💻 Author
 
-**Rahul Chaudhari**
-DevOps Engineer | Cloud Enthusiast
+**Rahul Chaudhari** 
+| DevOps Engineer | Cloud Enthusiast
 
 ---
 
