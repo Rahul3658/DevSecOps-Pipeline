@@ -1,0 +1,143 @@
+pipeline {
+    agent { 
+        label 'jenkins-node-lable' 
+    }
+    environment {
+        REGISTRY        = "docker.io/your-registry-username"
+        IMAGE_NAME      = "image-name"
+        IMAGE_TAG       = "${BUILD_NUMBER}"
+        FULL_IMAGE      = "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+    
+        KUBE_NAMESPACE  = "k8s-namespace"
+        KUBE_CONFIG     = "path of /.kube/config"
+        DEPLOYMENT      = "name of deployment"     
+        CONTAINER_NAME  = "name of container/pod" 
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'github-cred-ID',
+                    url: 'https://github.com/git-username/git-repo-name.git'
+            }
+        }
+        
+        stage('Gitleaks Secret Scan') {
+            steps {
+                sh '''
+                echo "🔐 Running Gitleaks Secret Scan..."
+                gitleaks detect --source . --verbose --redact --exit-code 1
+                '''
+            }
+        }
+        
+        stage('SonarQube Scan') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=Sonar-project-name \
+                        -Dsonar.sources=.
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                    docker build --network=host -t ${FULL_IMAGE} .
+                """
+            }
+        }
+        
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''
+                echo "🔍 Running Trivy Image Scan..."
+                trivy image --exit-code 1 --severity CRITICAL,HIGH ${FULL_IMAGE}
+                '''
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentails-ID',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${FULL_IMAGE}
+                    '''
+                }
+            }
+        }
+
+        stage('Update and Scan (checkov) Kubernetes Manifest') {
+            steps {
+                dir('k8s-manifests') {
+                    git branch: 'main',
+                        credentialsId: 'github-cred-ID',
+                        url: 'https://github.com/git-username/git-manifest-repo-name.git'
+                        
+                    sh '''
+                    echo "🔍 Running Kubernetes Security Scan with Checkov..."
+                    checkov -d . --framework kubernetes --compact --hard-fail-on HIGH
+                    '''
+        
+                    sh """
+                    sed -i "s|${REGISTRY}/${IMAGE_NAME}:.*|${FULL_IMAGE}|g" frontend/frontend_deployment.yaml  #replace same for backend
+                    """
+        
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'git-cred-ID',
+                            usernameVariable: 'GIT_USER',
+                            passwordVariable: 'GIT_PASS'
+                        )
+                    ]) {
+        
+                        sh """
+                        git config user.email "jenkins@local"
+                        git config user.name "jenkins"
+        
+                        git add .
+                        git commit -m "Update frontend image to ${IMAGE_TAG}" || echo "No changes"
+        
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/git-username/git-manifest-repo-name.git HEAD:main
+                        """
+                    }
+                }
+            }
+        }
+
+        
+         stage('Cleanup Docker Images') {
+            steps {
+                sh '''
+                  echo "🧹 Cleaning unused Docker images..."
+                  docker image prune -f
+                  docker image prune -a -f --filter "until=168h"
+                  docker builder prune -f
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 Deployment successful: ${FULL_IMAGE}"
+        }
+        failure {
+            echo "❌ Deployment failed"
+        }
+    }
+}
